@@ -64,3 +64,13 @@ eventSource.onmessage = function(event) {
 ## ตัวอย่างโปรเจกต์นี้
 - ใช้ SSE ส่งตำแหน่งเครื่องบินแบบเรียลไทม์จาก Django backend ไปยังหน้าเว็บ (Leaflet map)
 - ดูโค้ดตัวอย่างใน `sse_app/consumers.py` และ `sse_app/templates/sse_app/index.html`
+
+## ขั้นตอนสำหรับรันโปรเจกต์ SSE
+git clone https://github.com/narinthakan/djsse--65114540167.git
+cd djsse
+
+ติดตั้ง
+pip install -r requirements.txt
+pip install django-eventstream
+python manage.py runserver
+
