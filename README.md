@@ -67,10 +67,13 @@ eventSource.onmessage = function(event) {
 
 ## ขั้นตอนสำหรับรันโปรเจกต์ SSE
 git clone https://github.com/narinthakan/djsse--65114540167.git
+
 cd djsse
 
 ติดตั้ง
 pip install -r requirements.txt
+
 pip install django-eventstream
+
 python manage.py runserver
 
