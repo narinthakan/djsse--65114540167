@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Flight Tracking: Bangkok to Ubon</title>
+
+    <!-- ใช้ Leaflet สำหรับแผนที่ -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #b6c3ffff 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #b1afdeff, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.1"><circle cx="30" cy="30" r="2"/></g></svg>') repeat;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .flight-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8fafc;
+        }
+
+        .info-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .info-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #abbaffff, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .info-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .map-container {
+            padding: 0 30px 30px 30px;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .controls {
+            padding: 0 30px 30px 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #a5a1f8ff, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.5);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #b0acf0ff;
+            border: 2px solid #9a95f9ff;
+        }
+
+        .btn-secondary:hover {
+            background: #b9b6f7ff;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .progress-bar {
+            margin: 20px 30px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a4a0f1ff, #7c3aed);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .status-waiting {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-ready {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .status-flying {
+            background: #dbeafe;
+            color: #a5c1ffff;
+        }
+
+        .status-landed {
+            background: #f3e8ff;
+            color: #d3bcf9ff;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .flight-path-animation {
+            position: relative;
+        }
+
+        .airplane-trail {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #bab6f9ff;
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .flight-info {
+                padding: 20px;
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .map-container {
+                padding: 0 20px 20px 20px;
+            }
+            
+            #map {
+                height: 400px;
+            }
+            
+            .controls {
+                padding: 0 20px 20px 20px;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-plane"></i> Flight Tracker</h1>
+            <p class="subtitle">Real-time tracking from Bangkok to Ubon Ratchathani</p>
+        </div>
+
+        <div class="flight-info">
+            <div class="info-card">
+                <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="info-title">Origin</div>
+                <div class="info-value">Bangkok (BKK)</div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon"><i class="fas fa-flag-checkered"></i></div>
+                <div class="info-title">Destination</div>
+                <div class="info-value">Ubon Ratchathani</div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon"><i class="fas fa-route"></i></div>
+                <div class="info-title">Distance</div>
+                <div class="info-value" id="distance">~487 km</div>
+            </div>
+            <div class="info-card">
+                <div class="info-icon"><i class="fas fa-info-circle"></i></div>
+                <div class="info-title">Status</div>
+                <div class="info-value">
+                    <span id="status-indicator" class="status-indicator status-waiting">
+                        <i class="fas fa-clock"></i>
+                        <span id="status-text">Waiting</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="start-btn" onclick="startFlight()">
+                <i class="fas fa-play"></i>
+                Start Flight
+            </button>
+            <button class="btn btn-secondary" id="reset-btn" onclick="resetFlight()" disabled>
+                <i class="fas fa-redo"></i>
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map, marker;
+        let isFlying = false;
+        let flightInterval;
+        
+        // พิกัดของกรุงเทพฯ และ อุบลราชธานี
+        const startLatLng = [13.7563, 100.5018];  // กรุงเทพฯ
+        const endLatLng = [15.0870, 104.8827];  // อุบลราชธานี
+        let currentLatLng = startLatLng;
+
+        const totalDistance = mapDistance(startLatLng, endLatLng);
+        let distanceCovered = 0;
+
+        // ฟังก์ชันคำนวณระยะทางระหว่างสองพิกัด
+        function mapDistance(latLng1, latLng2) {
+            const R = 6371;
+            const lat1 = latLng1[0] * Math.PI / 180;
+            const lat2 = latLng2[0] * Math.PI / 180;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (latLng2[1] - latLng1[1]) * Math.PI / 180;
+
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1) * Math.cos(lat2) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // ฟังก์ชันอัปเดตสถานะ
+        function updateStatus(status, text, progress = 0) {
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            const progressFill = document.getElementById('progress-fill');
+            
+            // Remove all status classes
+            indicator.className = 'status-indicator';
+            
+            switch(status) {
+                case 'waiting':
+                    indicator.classList.add('status-waiting');
+                    indicator.innerHTML = '<i class="fas fa-clock"></i><span>' + text + '</span>';
+                    break;
+                case 'ready':
+                    indicator.classList.add('status-ready');
+                    indicator.innerHTML = '<i class="fas fa-check-circle"></i><span>' + text + '</span>';
+                    break;
+                case 'flying':
+                    indicator.classList.add('status-flying', 'pulse');
+                    indicator.innerHTML = '<i class="fas fa-plane"></i><span>' + text + '</span>';
+                    break;
+                case 'landed':
+                    indicator.classList.add('status-landed');
+                    indicator.innerHTML = '<i class="fas fa-map-pin"></i><span>' + text + '</span>';
+                    break;
+            }
+            
+            progressFill.style.width = progress + '%';
+        }
+
+        // ฟังก์ชันเริ่มต้นแผนที่
+        function initMap() {
+            map = L.map('map').setView(startLatLng, 8);
+
+            // Dark theme tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Custom airplane icon
+            const airplaneIcon = L.divIcon({
+                html: '<i class="fas fa-plane" style="color: #4336f8ff; font-size: 24px; transform: rotate(45deg);"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                className: 'airplane-marker'
+            });
+
+            // Create markers for start and end
+            const startIcon = L.divIcon({
+                html: '<i class="fas fa-map-marker-alt" style="color: #059669; font-size: 32px;"></i>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                className: 'start-marker'
+            });
+
+            const endIcon = L.divIcon({
+                html: '<i class="fas fa-map-marker-alt" style="color: #dc2626; font-size: 32px;"></i>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                className: 'end-marker'
+            });
+
+            // Add start and end markers
+            L.marker(startLatLng, {icon: startIcon}).addTo(map)
+                .bindPopup('<b>Bangkok</b><br>Origin Airport');
+            L.marker(endLatLng, {icon: endIcon}).addTo(map)
+                .bindPopup('<b>Ubon Ratchathani</b><br>Destination');
+
+            // Add flight path
+            const flightPath = L.polyline([startLatLng, endLatLng], {
+                color: '#8b5cf6',
+                weight: 2,
+                opacity: 0.8,
+                dashArray: '8, 8'
+            }).addTo(map);
+
+            // Add airplane marker
+            marker = L.marker(startLatLng, {icon: airplaneIcon}).addTo(map);
+
+            // Fit map to show both points
+            map.fitBounds([startLatLng, endLatLng], {padding: [50, 50]});
+        }
+
+
+        // เรียกฟังก์ชัน initMap เมื่อหน้าเว็บโหลดเสร็จ
+        window.onload = function() {
+            initMap();
+            // Add some CSS for custom markers
+            const style = document.createElement('style');
+            style.textContent = `
+                .airplane-marker {
+                    background: transparent !important;
+                    border: none !important;
+                }
+                .start-marker, .end-marker {
+                    background: transparent !important;
+                    border: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+
+            // เชื่อมต่อกับ SSE
+            const eventSource = new EventSource('/sse/');
+            eventSource.onmessage = function(event) {
+                const flightData = JSON.parse(event.data);
+                const latLng = [flightData.latitude, flightData.longitude];
+                marker.setLatLng(latLng);
+                map.setView(latLng, 8);
+                // อัปเดตสถานะ (ถ้ามีฟังก์ชัน updateStatus)
+                if (typeof updateStatus === 'function') {
+                    updateStatus(flightData.status.toLowerCase(), `Status: ${flightData.status}`);
+                }
+            };
+            eventSource.onerror = function(error) {
+                console.error("Error occurred: ", error);
+            };
+        };
+    </script>
+</body>
+</html>
